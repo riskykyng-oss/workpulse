@@ -1,0 +1,22 @@
+{
+  "name": "workpulse",
+  "private": true,
+  "version": "1.0.0",
+  "description": "WorkPulse - Know who's at work. Automatically.",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "setup": "npm install && npm run setup -w backend",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "test": "npm run test -w backend",
+    "seed": "npm run seed -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "socket.io-client": "^4.8.3"
+  }
+}

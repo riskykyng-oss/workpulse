@@ -1,0 +1,455 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  HR_ADMIN
+  MANAGER
+  EMPLOYEE
+  VIEWER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+enum DeviceType {
+  PHONE
+  TABLET
+  LAPTOP
+}
+
+enum DeviceStatus {
+  ACTIVE
+  INACTIVE
+  FALLBACK
+}
+
+enum DeviceIdentityStrategy {
+  MAC
+  RADIUS_CERT
+  COMPANION_UUID
+  CONTROLLER_ID
+  QR
+  GEOFENCE
+}
+
+enum NetworkStatus {
+  ONLINE
+  OFFLINE
+  DEGRADED
+}
+
+enum EventType {
+  CONNECT
+  DISCONNECT
+}
+
+enum SessionState {
+  DETECTED
+  PRESENT
+  LATE
+  NEEDS_REVIEW
+  ON_LEAVE
+  ABSENT
+  NOT_EXPECTED
+  MANUALLY_SET
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  ON_LEAVE
+  NOT_EXPECTED
+  NEEDS_REVIEW
+  MANUALLY_SET
+}
+
+enum PeriodStatus {
+  IN_PROGRESS
+  READY_FOR_REVIEW
+  CLOSED
+}
+
+enum ExceptionReason {
+  UNKNOWN_DEVICE
+  DATA_GAP
+  DEVICE_NEVER_LEAVE
+  ODD_TIMING
+  UNRESOLVED_LATE
+  UNRESOLVED_ABSENT
+}
+
+enum LunchMode {
+  FIXED
+  DETECTED
+  HYBRID
+}
+
+enum SummaryKind {
+  COMPANY
+  DEPARTMENT
+  EMPLOYEE
+}
+
+enum MonthDayMode {
+  LAST_DAY
+  FIXED
+}
+
+// ---------------------------------------------------------------------------
+// Organisation
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id             String       @id @default(cuid())
+  name           String
+  timezone       String       @default("Africa/Harare")
+  workWeek       String       @default("1,2,3,4,5") // ISO weekday numbers of the working week
+  holidayDates   DateTime[]   @default([])
+  retentionDays  Int          @default(365)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  departments    Department[]
+  users          User[]
+  locations      Location[]
+  rules          AttendanceRules?
+}
+
+// ---------------------------------------------------------------------------
+// Users & auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(EMPLOYEE)
+  employee     Employee? @relation(fields: [employeeId], references: [id])
+  employeeId   String?  @unique
+  settings     Json?                           // e.g. { notifyEmail: false, notifyPush: false }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+
+  auditLogs    AuditLog[]       @relation("AuditActor")
+  corrections  AttendanceCorrection[] @relation("CorrectionActor")
+  closedPeriods MonthlyPeriod[] @relation("PeriodCloser")
+  reopenedPeriods MonthlyPeriod[] @relation("PeriodReopener")
+
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Departments & employees
+// ---------------------------------------------------------------------------
+
+model Department {
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String
+  managerId      String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  manager        Employee?    @relation("DepartmentManager", fields: [managerId], references: [id])
+  employees      Employee[]
+  summaries      MonthlySummary[]
+}
+
+model Employee {
+id            String         @id @default(cuid())
+  employeeNo     String         @unique
+  name           String
+  firstName      String
+  lastName       String
+  email          String?
+  position       String
+  departmentId   String
+  employmentType EmploymentType @default(FULL_TIME)
+  active         Boolean        @default(true)
+  expectedWorkHours Int         @default(480) // per day, minutes
+  startDate      DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  department     Department     @relation(fields: [departmentId], references: [id])
+  user           User?
+  devices        Device[]
+  networkEvents  NetworkEvent[]
+  presenceSessions PresenceSession[]
+  attendanceRecords AttendanceRecord[]
+  summaries         MonthlySummary[]
+
+  managedDepartment Department? @relation("DepartmentManager")
+
+  @@index([departmentId])
+  @@index([name])
+}
+
+model Device {
+  id            String                @id @default(cuid())
+  employeeId    String
+  name          String
+  type          DeviceType            @default(PHONE)
+  os            String
+  identifier    String                @unique
+  identityStrategy DeviceIdentityStrategy @default(COMPANION_UUID)
+  status        DeviceStatus          @default(ACTIVE)
+  isPrimary     Boolean               @default(false)
+  registeredAt  DateTime              @default(now())
+  lastSeenAt    DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  employee      Employee              @relation(fields: [employeeId], references: [id])
+  events        NetworkEvent[]
+
+  @@index([employeeId])
+}
+
+// ---------------------------------------------------------------------------
+// Locations & networks
+// ---------------------------------------------------------------------------
+
+model Location {
+  id             String    @id @default(cuid())
+  name           String
+  organizationId String
+  createdAt      DateTime  @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  networks       Network[]
+}
+
+model Network {
+  id            String        @id @default(cuid())
+  locationId    String
+  name          String
+  identifiers   Json          @default("[]") // authorized SSIDs / controller ids / CIDR
+  status        NetworkStatus @default(ONLINE)
+  lastSyncAt    DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+
+  location      Location      @relation(fields: [locationId], references: [id])
+  events        NetworkEvent[]
+}
+
+// ---------------------------------------------------------------------------
+// Detection feed & sessions
+// ---------------------------------------------------------------------------
+
+model NetworkEvent {
+  id             String    @id @default(cuid())
+  deviceId       String?
+  employeeId     String?
+  networkId      String?
+  rawDeviceId    String    // as reported by the adapter (never assumed to be a MAC)
+  networkName    String
+  eventType      EventType
+  timestamp      DateTime
+  adapterSource  String    @default("mock")
+  createdAt      DateTime  @default(now())
+
+  device         Device?   @relation(fields: [deviceId], references: [id])
+  employee       Employee? @relation(fields: [employeeId], references: [id])
+  network        Network?  @relation(fields: [networkId], references: [id])
+
+  @@index([employeeId, timestamp])
+  @@index([timestamp])
+}
+
+model PresenceSession {
+  id              String       @id @default(cuid())
+  employeeId      String
+  date            DateTime     // org-local midnight for the working day
+  arrivalAt       DateTime?
+  confirmedAt     DateTime?
+  departureAt     DateTime?
+  lastSeenAt      DateTime?
+  grossMinutes    Int          @default(0)
+  lunchDeduction  Int          @default(0)
+  netMinutes      Int          @default(0)
+  lunchDetected   Int          @default(0)
+  state           SessionState @default(DETECTED)
+  reason          String?
+  evidence        Json?        @default("{}")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  employee        Employee     @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([date])
+}
+
+// ---------------------------------------------------------------------------
+// Daily attendance + corrections
+// ---------------------------------------------------------------------------
+
+model AttendanceRecord {
+  id            String           @id @default(cuid())
+  employeeId    String
+  date          DateTime         // org-local midnight of the working day
+  status        AttendanceStatus @default(NEEDS_REVIEW)
+  arrivalAt     DateTime?
+  departureAt   DateTime?
+  grossMinutes  Int              @default(0)
+  lunchDeduction Int             @default(0)
+  netMinutes    Int              @default(0)
+  lateMinutes   Int              @default(0)
+  exceptionReason String?        // ExceptionReason
+  exceptionNote String?
+  needsReview   Boolean          @default(false)
+  monthlyPeriodId String?
+  source        String           @default("auto") // auto | manual
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  employee      Employee         @relation(fields: [employeeId], references: [id])
+  monthlyPeriod MonthlyPeriod?   @relation(fields: [monthlyPeriodId], references: [id])
+  corrections   AttendanceCorrection[]
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([status])
+}
+
+model AttendanceCorrection {
+  id                 String   @id @default(cuid())
+  attendanceRecordId String
+  oldValue           Json
+  newValue           Json
+  reason             String
+  actorId            String
+  actorName          String
+  createdAt          DateTime @default(now())
+
+  attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id])
+  actor            User             @relation("CorrectionActor", fields: [actorId], references: [id])
+
+  @@index([attendanceRecordId])
+}
+
+// ---------------------------------------------------------------------------
+// Rules (single row, enforced server-side only)
+// ---------------------------------------------------------------------------
+
+model AttendanceRules {
+  id                      Int        @id @default(1)
+  organizationId          String     @unique
+  workStartMinutes        Int        @default(480)  // 08:00
+  workEndMinutes          Int        @default(1020) // 17:00
+  lateThresholdMinutes    Int        @default(490)  // after 08:10
+  confirmationWindowMinutes Int      @default(5)
+  disconnectBridgeMinutes Int        @default(10)
+  departureGraceMinutes   Int        @default(15)
+  absentCutoffMinutes     Int        @default(600)  // 10:00
+  lunchStartMinutes       Int        @default(780)  // 13:00
+  lunchEndMinutes         Int        @default(840)  // 14:00
+  lunchMode               LunchMode  @default(HYBRID)
+  lunchMinMinutes         Int        @default(30)
+  lunchMaxMinutes         Int        @default(90)
+  lunchFixedMinutes       Int        @default(60)
+  monthEndDayMode         MonthDayMode @default(LAST_DAY)
+  monthEndFixedDay        Int        @default(28)
+  monthEndTimeMinutes     Int        @default(1439) // 23:59
+  emailExceptions         Boolean    @default(false)
+  notifyWeeks             Int        @default(1)
+  updatedBy               String?
+  updatedByName           String?
+  updatedAt               DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Monthly periods, summaries, audit
+// ---------------------------------------------------------------------------
+
+model MonthlyPeriod {
+  id            String       @id @default(cuid())
+  month         String       @unique // "2026-09"
+  status        PeriodStatus @default(IN_PROGRESS)
+  companyRate   Float?
+  companyPresentDays Int?
+  companyNetMinutes Int?
+  workingDays   Int          @default(0)
+  lastDay       DateTime?
+  compiledAt    DateTime?
+  compiledBy    String?
+  closedBy      String?
+  closedAt      DateTime?
+  reopenedBy    String?
+  reopenedAt    DateTime?
+  reopenedReason String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  records       AttendanceRecord[]
+  summaries     MonthlySummary[]
+
+  closedByUser   User? @relation("PeriodCloser", fields: [closedBy], references: [id])
+  reopenedByUser User? @relation("PeriodReopener", fields: [reopenedBy], references: [id])
+}
+
+model MonthlySummary {
+  id              String      @id @default(cuid())
+  periodicMonthId String
+  kind            SummaryKind
+  departmentId    String?
+  employeeId      String?
+  daysPresent     Int         @default(0)
+  daysLate        Int         @default(0)
+  daysAbsent      Int         @default(0)
+  daysLeave       Int         @default(0)
+  daysNotExpected Int         @default(0)
+  daysNeedsReview Int         @default(0)
+  workingDays     Int         @default(0)
+  grossMinutes    Int         @default(0)
+  netMinutes      Int         @default(0)
+  lunchDeductions Int         @default(0)
+  manualCorrections Int       @default(0)
+  avgArrivalMinutes  Int?
+  avgDepartureMinutes Int?
+  attendanceRate  Float?
+
+  monthlyPeriod   MonthlyPeriod @relation(fields: [periodicMonthId], references: [id])
+  department      Department?   @relation(fields: [departmentId], references: [id])
+  employee        Employee?     @relation(fields: [employeeId], references: [id])
+
+  @@index([periodicMonthId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorName  String   @default("System")
+  action     String
+  targetType String?
+  targetId   String?
+  reason     String?
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([createdAt])
+  @@index([action])
+}
