@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { orgYmd, orgDayStart, orgWeekday, minuteOfDay, orgToday } from '../utils/time.js';
+import { orgYmd, orgDayStart, minuteOfDay, orgToday } from '../utils/time.js';
 import { normalizeRules, evaluateDay } from './presenceEngine.js';
 import { audit } from './auditService.js';
 
@@ -286,7 +286,7 @@ export class AttendanceService {
     };
     const newValue = { ...oldValue, ...changes };
 
-    const updated = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       const up = await tx.attendanceRecord.update({
         where: { id: recordId },
         data: {
@@ -342,10 +342,6 @@ function reasonLabel(reason) {
 
 function time(minutes) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-}
-
-function fmt(d) {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 export const attendanceService = new AttendanceService();

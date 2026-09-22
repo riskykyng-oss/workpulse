@@ -8,7 +8,7 @@ import { StatusBadge, fmtTime } from '../lib/format';
 export default function Departments() {
   const { data, isLoading } = useQuery({ queryKey: ['departments'], queryFn: () => api('/departments') });
   const [openId, setOpenId] = useState(null);
-  const [roster, setRoster] = useState(null);
+  const [, setRoster] = useState(null);
 
   function openRoster(dept) {
     setOpenId(dept.id);
@@ -28,7 +28,7 @@ export default function Departments() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold">Departments</h1>
-        <p className="text-sm text-slate-500">Headcount, managers and today's attendance by department.</p>
+        <p className="text-sm text-slate-500">Headcount, managers and today&apos;s attendance by department.</p>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {depts.map((d) => (

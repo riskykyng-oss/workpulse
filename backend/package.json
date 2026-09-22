@@ -12,7 +12,8 @@
     "db:push": "prisma db push --skip-generate",
     "db:seed": "node prisma/seed.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint src scripts test vitest.config.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

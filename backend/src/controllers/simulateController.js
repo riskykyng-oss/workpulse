@@ -2,10 +2,9 @@ import { z } from 'zod';
 import { mockAdapter } from '../detection/MockDetectionAdapter.js';
 import { presenceService } from '../services/presenceService.js';
 import { notificationService } from '../services/notificationService.js';
-import { orgDayStart, orgYmd, orgToday } from '../utils/time.js';
+import { orgToday } from '../utils/time.js';
 import { audit } from '../services/auditService.js';
 
-const ORG_TZ = 'Africa/Harare';
 const NETWORK = 'Head Office';
 
 /**

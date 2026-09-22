@@ -27,7 +27,7 @@ export class DetectionAdapter {
    * Subscribes to detections coming from a live feed.
    * @param {(detection: Detection) => void} callback
    */
-  onDetection(callback) {
+  onDetection(_callback) {
     throw new Error('Adapter must implement onDetection(callback)');
   }
 
@@ -35,7 +35,7 @@ export class DetectionAdapter {
    * Push a single detection through the adapter (tests, simulators, CLI).
    * @param {Detection} detection
    */
-  async emit(detection) {
+  async emit(_detection) {
     throw new Error('Adapter must implement emit(detection)');
   }
 

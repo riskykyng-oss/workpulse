@@ -30,8 +30,8 @@ export default function Dashboard() {
       setFeed((f) => [{ name: p?.employee || p?.name || 'Employee', kind: p?.kind || 'arrival', isLate: p?.isLate }, ...f].slice(0, 8));
       invalidate();
     },
-    'attendance:totals': (p) => invalidate(),
-    'attendance:exception': (p) => invalidate(),
+    'attendance:totals': () => invalidate(),
+    'attendance:exception': () => invalidate(),
   });
 
   const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: () => api('/dashboard') });
@@ -172,7 +172,7 @@ export default function Dashboard() {
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Who's on site now</h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">Who&apos;s on site now</h2>
         <div className="flex flex-wrap gap-2">
           {depts.map((d) => (
             <span key={d.id} className="badge bg-slate-100 text-slate-600">

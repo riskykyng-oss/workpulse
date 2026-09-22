@@ -1,16 +1,14 @@
 import { prisma } from '../config/prisma.js';
 import {
-  orgYmd, orgDayStart, orgToday, monthStartUTC, nextMonthStartUTC,
+  orgToday, monthStartUTC, nextMonthStartUTC,
   workingDaysInMonth, fmtDuration, fmtTime, minuteOfDay,
 } from '../utils/time.js';
-import { normalizeRules } from './presenceEngine.js';
 import { audit } from './auditService.js';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import { PassThrough } from 'node:stream';
 
 const ORG_TZ = 'Africa/Harare';
-const SOURCE_MANUAL_INCLUDE = ['MANUALLY_SET', 'ON_LEAVE', 'NOT_EXPECTED'];
 
 // Fields persisted on monthlySummary rows — drops derived-only counters.
 function pickSummaryFields(s) {
@@ -202,7 +200,6 @@ export class MonthlyService {
   async workingDaysCount(month) {
     const org = await prisma.organization.findFirst({ include: { rules: true } });
     const full = workingDaysInMonth(month, org?.workWeek || '1,2,3,4,5', ORG_TZ).length;
-    const start = monthStartUTC(month, ORG_TZ);
     const today = orgToday();
     const done = workingDaysInMonth(month, org?.workWeek || '1,2,3,4,5', ORG_TZ).filter((d) => d < today).length;
     return Math.min(done, full) || full;

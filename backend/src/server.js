@@ -12,6 +12,7 @@ import { presenceService } from './services/presenceService.js';
 import { setupSocket } from './socket/attendanceSocket.js';
 import { startMonthlyScheduler, startLiveTicker, startNetworkPing } from './jobs/monthlyCompile.js';
 import { stopDatabase } from './config/database.js';
+import { logger } from './utils/logger.js';
 
 const DEMO_SECRET = 'workpulse-demo-secret-change-me';
 
@@ -49,11 +50,10 @@ async function main() {
   startNetworkPing();
 
   server.listen(env.port, () => {
-    console.log(`WorkPulse API listening on http://localhost:${env.port}`);
-    console.log('  Detection adapter : mock (simulated network feed)');
-    console.log('  Database          : postgresql (embedded cluster when DATABASE_URL unset)');
+    logger.info('workpulse-api listening', { port: env.port });
+    logger.info('workpulse-api config', { adapter: 'mock', database: env.databaseUrl ? 'sql' : 'embedded' });
     if (env.jwtSecret === DEMO_SECRET) {
-      console.warn('  [security] JWT_SECRET is still the demo default. Set JWT_SECRET before any real deployment.');
+      logger.warn('JWT_SECRET is still the demo default', { hint: 'Set JWT_SECRET before any real deployment.' });
     }
   });
 
@@ -66,6 +66,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('WorkPulse failed to start:', err);
+  logger.error('WorkPulse failed to start', { err });
   process.exit(1);
 });

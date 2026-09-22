@@ -4,7 +4,7 @@ import { CheckCircle2, ShieldCheck, Clock } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Spinner } from '../components/ui';
-import { StatusBadge, fmtTime, fmtMin, fmtClock } from '../lib/format';
+import { StatusBadge, fmtTime, fmtMin } from '../lib/format';
 
 export default function Me() {
   const { user } = useAuth();

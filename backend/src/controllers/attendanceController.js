@@ -1,6 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { attendanceService } from '../services/attendanceService.js';
-import { orgDayStart, orgYmd, fmtTime, fmtDate, orgToday } from '../utils/time.js';
+import { fmtTime, fmtDate, orgToday } from '../utils/time.js';
 import { managerScope } from '../middleware/auth.js';
 
 const ORG_TZ = 'Africa/Harare';
@@ -121,7 +121,7 @@ export async function today(req, res, next) {
   try {
     const empId = req.user.employeeId;
     if (!empId) return res.json({ record: null });
-    const [orgUser, rules] = await Promise.all([
+    const [, rules] = await Promise.all([
       prisma.user.findUnique({ where: { id: req.user.id }, include: { employee: { include: { department: true } } } }),
       prisma.attendanceRules.findUnique({ where: { id: 1 } }),
     ]);

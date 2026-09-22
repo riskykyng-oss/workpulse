@@ -41,7 +41,7 @@ export default function LiveRegister() {
     queryFn: () => api('/attendance/live'),
     refetchInterval: 5_000,
   });
-  const records = data?.records || [];
+  const records = useMemo(() => data?.records || [], [data]);
 
   const depts = useMemo(() => [...new Set(records.map((r) => r.employee.department.name))].sort(), [records]);
 
@@ -276,7 +276,6 @@ function EvidenceDrawer({ recordId, onClose }) {
     queryKey: ['evidence', recordId],
     queryFn: () => api(`/attendance/${recordId}/evidence`),
   });
-  const toast = useToast();
 
   return (
     <Modal open onClose={onClose} title="Attendance evidence" wide>

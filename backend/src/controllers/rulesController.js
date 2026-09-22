@@ -1,7 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { audit } from '../services/auditService.js';
 import { normalizeRules, evaluateDay, decideStatus, canonicalWorkedExample } from '../services/presenceEngine.js';
-import { orgYmd, orgDayStart, orgToday } from '../utils/time.js';
+import { orgToday } from '../utils/time.js';
 import { presenceService } from '../services/presenceService.js';
 
 const ORG_TZ = 'Africa/Harare';

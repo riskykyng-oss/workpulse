@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../auth/AuthContext';
-import { useRealtime, socket } from '../socket';
+import { useRealtime } from '../socket';
 import { nowOrgHourMin } from '../lib/format';
 
 const NAV = [

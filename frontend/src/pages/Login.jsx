@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Activity, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/ui';
@@ -14,7 +14,6 @@ const DEMO = [
 export default function Login() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,7 +45,7 @@ export default function Login() {
             W
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">WorkPulse</h1>
-          <p className="mt-1 text-sm text-slate-300">Know who's at work. Automatically.</p>
+          <p className="mt-1 text-sm text-slate-300">Know who&apos;s at work. Automatically.</p>
         </div>
         <form onSubmit={submit} className="card p-6">
           <h2 className="mb-4 text-lg font-semibold">Sign in</h2>
