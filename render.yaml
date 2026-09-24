@@ -1,5 +1,6 @@
 # Render Blueprint — the long-running API host for WorkPulse.
-# The SPA runs on Vercel (separately); this service provides /api + Socket.IO.
+# The SPA runs on Vercel (https://workpulse-attendance.vercel.app); this
+# service provides /api + Socket.IO, and FRONTEND_ORIGIN pins the CORS origin.
 # On boot the app runs `prisma db push` and seeds the demo dataset when empty.
 #
 # Deploy: push this repo, then at https://dashboard.render.com/blueprints
@@ -18,7 +19,7 @@ services:
       - key: DEMO_TODAY_YMD
         value: 2026-09-21
       - key: FRONTEND_ORIGIN
-        value: https://workpulse.vercel.app
+        value: https://workpulse-attendance.vercel.app
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
