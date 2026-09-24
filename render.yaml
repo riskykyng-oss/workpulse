@@ -1,0 +1,31 @@
+# Render Blueprint — the long-running API host for WorkPulse.
+# The SPA runs on Vercel (separately); this service provides /api + Socket.IO.
+# On boot the app runs `prisma db push` and seeds the demo dataset when empty.
+#
+# Deploy: push this repo, then at https://dashboard.render.com/blueprints
+# paste the repo -> New Blueprint -> Apply. A Postgres database is created too.
+services:
+  - type: web
+    name: workpulse-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run db:generate -w backend
+    startCommand: npm run start -w backend
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEMO_TODAY_YMD
+        value: 2026-09-21
+      - key: FRONTEND_ORIGIN
+        value: https://workpulse.vercel.app
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: workpulse-db
+          property: connectionString
+
+databases:
+  - name: workpulse-db
+    plan: free
