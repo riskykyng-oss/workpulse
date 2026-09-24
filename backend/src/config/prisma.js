@@ -5,6 +5,21 @@
 // .findMany(...)`, `prisma.$transaction(...)`, ...) keeps working unchanged.
 let clientPromise = null;
 
+// Prisma defaults its pool to `n CPU × 2 + 1`, which exceeds the tiny
+// connection ceiling of free hosted Postgres (e.g. Render free = 3) and makes
+// Postgres kill connections mid-query ("Server has closed the connection").
+// Pin a small, explicit limit unless the host URL already overrides it.
+function withPoolLimit(url) {
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has('connection_limit')) u.searchParams.set('connection_limit', '3');
+    if (!u.searchParams.has('pool_timeout')) u.searchParams.set('pool_timeout', '5');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 export function getClient() {
   if (!clientPromise) {
     clientPromise = (async () => {
@@ -15,6 +30,7 @@ export function getClient() {
       }
       const { PrismaClient } = await import('@prisma/client');
       return new PrismaClient({
+        datasources: { db: { url: withPoolLimit(process.env.DATABASE_URL) } },
         log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
       });
     })().catch((err) => {
