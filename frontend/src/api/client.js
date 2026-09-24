@@ -4,6 +4,11 @@ const SESSION_KEY = 'workpulse_session';
 // alternative is an httpOnly cookie + CSRF token — deferred because this SPA
 // serves no HTML-crafting endpoints yet (all responses are JSON via fetch).
 
+// Same-origin by default (Vite proxy / combined hosting). Point VITE_API_URL
+// at the API host for a split deploy (e.g. the Express service on Render
+// behind Vercel's static frontend).
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 export function loadSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -30,7 +35,7 @@ export async function api(path, { method = 'GET', body, params } = {}) {
   if (body) headers['Content-Type'] = 'application/json';
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
-  let url = `/api${path}`;
+  let url = `${API_BASE}/api${path}`;
   if (params) {
     const qs = Object.entries(params)
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
@@ -61,7 +66,7 @@ export async function apiBlob(path, filename) {
   const token = getToken();
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`/api${path}`, { headers });
+  const res = await fetch(`${API_BASE}/api${path}`, { headers });
   if (!res.ok) {
     const err = new Error('Export failed.');
     err.status = res.status;
